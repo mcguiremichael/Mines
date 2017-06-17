@@ -202,6 +202,7 @@ def drawHighlightBox(boxx, boxy):
     
     
     
+    
 def generateRevealedBoxesData(val):
     new = []
     revealedBoxes = []
