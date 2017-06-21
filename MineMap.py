@@ -1,11 +1,19 @@
 import random
 import GridSquare
+import EventSquare
 
 class MineMap:
 
 
-    OFFCOLOR = (200, 200, 200)
-    ONCOLOR = (100, 100, 100)
+    OFFCOLOR = (210, 210, 210)
+    ONCOLOR = (140, 140, 140)
+    BACKGROUNDCOLOR = (160, 160, 135)
+    #each box in the grid is 37 pixels across
+    boxWidth = 39
+    margin = 1
+    leftButtonNum = 1
+    rightButtonNum = 3
+    debugMode = False
 
     """
     Creates a MineMap, a grid that stores the information in an array of GridSquares.
@@ -24,32 +32,58 @@ class MineMap:
         The y-value of the topleft-most coordinate in the grid when it is displayed
     boxWidth : int
         The number of pixels the sides of each GridSquare in grid is composed of
-    marginSize : int
+    margin : int
         The number of pixels between a GridSquare in grid and the GridSquares surrounding it
     surface : pygame.display
         The window on which the grid will be displayed as the game is played
     squaresClicked : [[int, int]]
         The list of pairs of x and y coordinates that have already been clicked
     """
-    def __init__(self, mapWidth, mapHeight, numMines, topLeftX, topLeftY, boxWidth, marginSize, surface, squaresClicked):
+    def __init__(self, mapWidth, mapHeight, numMines, surface):
         self.mapWidth = mapWidth
         self.mapHeight = mapHeight
         self.numMines = numMines
-        self.topLeftX = topLeftX
-        self.topLeftY = topLeftY
-        self.boxWidth = boxWidth
-        self.marginSize = marginSize
         self.surface = surface
-        self.squaresClicked = squaresClicked
         
+        
+        
+        #Maximum number of frames that can pass between the letting up of both buttons in order to call revealSurroundings.
+        self.timeThreshold = 30
         self.grid = []
+        self.squaresClicked = []
+        
+         #Each time a user event happens (The left or right mouse buttons are either clicked down or let up), logs will store the location of the event and the frame in which it happened.
+        #Each entry into logs will be of the following format:
+        #   logs[i] = [position, buttonNumber, up(False) or down(True), frame]
+        self.logs = []
+        self.leftDown = False
+        self.rightDown = False
+        self.frozen = False
+        
+        #Topleft most coords of the game grid, in pixel values
+        self.topLeftX = (self.surface.get_width() - ((MineMap.boxWidth + MineMap.margin) * self.mapWidth)) / 2
+        self.topLeftY = 100
+        
+        
+        self.resetButton = self.makeResetButton()
+        
         self.randomizeGrid()
         
-    def reinitialize(self):
-        temp = self.numMines
-        self.numMines = 0
+    def makeResetButton(self):
+        width = 60
+        x = (self.surface.get_width() - width) / 2
+        y = 20
+        offColor = MineMap.OFFCOLOR
+        onColor = MineMap.ONCOLOR
+        return EventSquare.EventSquare(x, y, width, offColor, onColor, False, self.surface)
+        
+    def startNewGame(self):
         self.randomizeGrid()
-        self.numMines = temp
+        self.squaresClicked = []
+        self.logs = []
+        self.leftDown = False
+        self.rightDown = False
+        self.frozen = False
         
     def disperseMines(self):
         totalNum = self.mapHeight * self.mapWidth
@@ -66,16 +100,15 @@ class MineMap:
         self.grid = [[0 for i in range(self.mapWidth)] for i in range(self.mapHeight)]
         for i in range(self.mapHeight):
             for j in range(self.mapWidth):
-                x = self.topLeftX + j * (self.boxWidth + self.marginSize)
-                y = self.topLeftY + i * (self.boxWidth + self.marginSize)
+                x = self.topLeftX + j * (MineMap.boxWidth + MineMap.margin)
+                y = self.topLeftY + i * (MineMap.boxWidth + MineMap.margin)
                 #Change that True to False in release
-                self.grid[i][j] = GridSquare.GridSquare(x, y, self.boxWidth, MineMap.OFFCOLOR, MineMap.ONCOLOR, self.surface, adjacentGrid[i][j], False, False, False)
+                self.grid[i][j] = GridSquare.GridSquare(x, y, MineMap.boxWidth, MineMap.OFFCOLOR, MineMap.ONCOLOR, self.surface, adjacentGrid[i][j], MineMap.debugMode, False, False)
         
     def randomizeGrid(self):
         numSquares = self.mapWidth * self.mapHeight
         if (self.numMines >= numSquares):
             self.numMines = numSquares - 1
-        minePlaces = random.sample(range(0, numSquares), self.numMines)
         mineGrid = self.disperseMines()
         adjacentGrid = getAdjacentGrid(mineGrid, 9)
         self.initializeGrid(adjacentGrid)    
@@ -84,7 +117,7 @@ class MineMap:
         values = [i for i in range(totalNum)]
         invalidIndices = []
         for i in self.squaresClicked:
-            index = i[0] + i[1] * self.mapHeight
+            index = i[0] + i[1] * self.mapWidth
             invalidIndices.append(index)
         for i in sorted(invalidIndices, reverse=True):
             del values[i]
@@ -95,25 +128,15 @@ class MineMap:
         for i in range(self.mapHeight):
             for j in range(self.mapWidth):
                 self.grid[i][j].drawSquare()
+        self.resetButton.drawSquare()
                 
     def getSquareFromCoords(self, pos):
         if (pos[0] <= self.maxXCoord() and pos[0] >= self.topLeftX and pos[1] <= self.maxYCoord() and pos[1] >= self.topLeftY):
-            x = (pos[0] - self.topLeftX) / (self.boxWidth + self.marginSize)
-            y = (pos[1] - self.topLeftY) / (self.boxWidth + self.marginSize)
+            x = (pos[0] - self.topLeftX) / (MineMap.boxWidth + MineMap.margin)
+            y = (pos[1] - self.topLeftY) / (MineMap.boxWidth + MineMap.margin)
             return [x, y]
         else:
             return None
-        
-    def reveal(self, xcoord, ycoord):
-        revealedBox = self.getSquareFromCoords(xcoord, ycoord)
-        if revealedBox == None:
-            return
-        revealedBox.clicked = True
-        revealedBox.drawSquare()
-        if (revealedBox.value == 9):
-            revealedBox.drawWrongChoice()
-            self.displayMines()
-        
         
     def clearSurroundings(self, coords):
         x = coords[0]
@@ -131,23 +154,85 @@ class MineMap:
                 square = (self.grid)[newY][newX]
                 if (square.clicked == True):
                     continue
-                square.clicked = True
+                if (square.flagged == True and square.isMine()):
+                    continue
+                self.setSquareClicked([newX, newY], True)
                 if (square.value == 0):
                     self.clearSurroundings([newX, newY])
+                    
+    def canClearSurroundings(self, coords):
+        total = 0
+        x = coords[0]
+        y = coords[1]
+        for i in range(-1, 2):
+            newY = y + i
+            if (newY < 0 or newY >= self.mapHeight):
+                continue
+                
+            for j in range(-1, 2):
+                newX = x + j
+                if (newX < 0 or newX >= self.mapWidth):
+                    continue
+                
+                if self.grid[newY][newX].flagged == True:
+                    total += 1
+                    
+        return total == self.grid[y][x].value
+        
+    def doubleClickEvent(self, left, right):
+        if (self.leftDown == self.rightDown):
+            return False
+        
+        desiredButtonVal = 0
+        if (self.leftDown == True):
+            desiredButtonVal = right
+        else:
+            desiredButtonVal = left
+            
+        last = len(self.logs)-1
+        i = last - 1
+        while i >= 0:
+            log = self.logs[i]
+            lastLog = self.logs[last]
+            if (log[3] - lastLog[3] > self.timeThreshold):
+                return False
+            if log[0] == None:
+                return False
+            if ((log[1] == desiredButtonVal) and (log[2] == False)):
+                if (log[0] != lastLog[0]):
+                    return False
+                return True
+            if ((log[1] != desiredButtonVal) and (log[2] == False)):
+                return False
+            i -= 1
+        return False
+                    
+    def gameOver(self):
+        self.frozen = True
+        self.displayMines()
     
     def maxXCoord(self):
-        return self.topLeftX + self.mapWidth * (self.boxWidth + self.marginSize) - 1
+        return self.topLeftX + self.mapWidth * (MineMap.boxWidth + MineMap.margin) - 1
         
     def maxYCoord(self):
-        return self.topLeftY + self.mapHeight * (self.boxWidth + self.marginSize) - 1
+        return self.topLeftY + self.mapHeight * (MineMap.boxWidth + MineMap.margin) - 1
         
     def displayMines(self):
-        for i in (len(self.grid)):
-            for j in (len(self.grid[0])):
-                if (self.grid[i][j].value == 9):
-                    self.grid[i][j].drawSquare()
+        for i in self.grid:
+            for j in i:
+                if (j.value == 9 and j.flagged == False):
+                    j.clicked = True
+                if (j.value != 9 and j.flagged == True):
+                    j.value = 10
                     
     def setSquareClicked(self, coords, isClicked):
+        if (len(self.squaresClicked) == 0):
+            self.squaresClicked.append(coords)
+            self.randomizeGrid()
+        else:
+            self.squaresClicked.append(coords)
+        if ((self.grid[coords[1]][coords[0]]).isMine() == True and self.grid[coords[1]][coords[0]].flagged == False):
+            self.gameOver()
         self.grid[coords[1]][coords[0]].clicked = isClicked
         
     def setSquareFlagged(self, coords, isFlagged):
@@ -158,6 +243,12 @@ class MineMap:
         
     def __getitem__(self, key):
         return self.grid[key[1]][key[0]]
+        
+    def resetClicked(self, pos):
+        b = self.resetButton
+        if ((pos[0] >= b.x and pos[0] <= b.upperX) and (pos[1] >= b.y and pos[1] <= b.upperY)):
+            return True
+        return False
                 
        
                             
@@ -193,3 +284,6 @@ def getAdjacentGrid(mineGrid, key):
                     if (mineGrid[y][x] == key):
                         mineGrid[i][j] += 1
     return mineGrid
+    
+    
+    

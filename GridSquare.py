@@ -28,6 +28,7 @@ hovering:
 """
 class GridSquare(Button.Button):
 
+    RED = (255, 0, 0)
     COLOR1 = (100, 100, 255)
     COLOR2 = (0, 255, 0)
     COLOR3 = (255, 0, 0)
@@ -37,6 +38,9 @@ class GridSquare(Button.Button):
     COLOR7 = (0, 0, 0)
     COLOR8 = (100, 100, 100)
     BLACK = (0, 0, 0) 
+    FLAGCOLOR = (200, 0, 0)
+    
+    colors = [COLOR1, COLOR2, COLOR3, COLOR4, COLOR5, COLOR6, COLOR7, COLOR8]
 
     def __init__(self, x, y, width, offColor, onColor, surface, value, clicked, flagged, hovering):
         Button.Button.__init__(self, x, y, width, width, offColor, onColor, surface)
@@ -44,76 +48,54 @@ class GridSquare(Button.Button):
         self.clicked = clicked
         self.flagged = flagged
         self.hovering = hovering
-            
-    def drawOne(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR1, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+        self.font = pygame.font.Font(None, int(self.width * 1.5))
         
-    def drawTwo(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR2, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
-        
-    def drawThree(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR3, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
-        
-    def drawFour(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR4, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
-        
-    def drawFive(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR5, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+    def adjustedX(self):
+        return self.x + self.width / 4
     
-    def drawSix(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR6, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+    def adjustedY(self):
+        return self.y + self.height / 20
         
-    def drawSeven(self):
+    def drawNumber(self):
+        number = self.value
+        if (number < 1 or number > 8):
+            return
         self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR7, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
-        
-    def drawEight(self):
-        self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR8, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+        self.drawText(str(number), GridSquare.colors[number-1])
     
     def drawMine(self):
         self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.BLACK, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+        pygame.draw.circle(self.surface, GridSquare.BLACK, (self.x + self.width / 2, self.y + self.height / 2), self.width / 3)
     
     def drawFlag(self):
         self.drawClicked()
-        pygame.draw.rect(self.surface, GridSquare.COLOR1, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+        pygame.draw.rect(self.surface, GridSquare.FLAGCOLOR, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
         
     def drawWrongChoice(self):
-        pygame.draw.rect(self.surface, GridSquare.Color1, (self.x + 1, self.y + 1, self.width - 2, self.width - 2))
+        self.drawMine()
+        pygame.draw.line(self.surface, GridSquare.RED, (self.x + self.width / 8, self.y + self.height / 8), (self.x + (self.width * 7 / 8), self.y + (self.height * 7 / 8)), self.width / 8)
+        pygame.draw.line(self.surface, GridSquare.RED, (self.x + self.width / 8, (self.y + self.height * 7 / 8)), (self.x + (self.width * 7 / 8), self.y + self.width / 8), self.width / 8)
         
     def drawSquare(self):
         val = self.value
-        if (self.clicked == False and self.hovering == True):
+        if (val == 10):
+            self.drawWrongChoice()
+        elif (self.flagged == True):
+            self.drawFlag()
+        elif (self.clicked == False and self.hovering == True):
             self.drawClicked()
         elif self.clicked == False:
             self.drawUnclicked()
         elif val == 0:
             self.drawClicked()
-        elif val == 1:
-            self.drawOne()
-        elif val == 2:
-            self.drawTwo()
-        elif val == 3:
-            self.drawThree()
-        elif val == 4:
-            self.drawFour()
-        elif val == 5:
-            self.drawFive()
-        elif val == 6:
-            self.drawSix()
-        elif val == 7:
-            self.drawSeven()
-        elif val == 8:
-            self.drawEight()
         elif val == 9:
             self.drawMine()
+        else:
+            self.drawNumber()
+            
+    def drawText(self, text, color):
+        t = self.font.render(text, True, color)
+        self.surface.blit(t, (self.adjustedX(), self.adjustedY()))
     
     def setClicked(self, isClicked):
         self.clicked = isClicked
@@ -123,5 +105,8 @@ class GridSquare(Button.Button):
         
     def setHovering(self, isHovering):
         self.hovering = isHovering
+        
+    def isMine(self):
+        return self.value == 9
     
 
