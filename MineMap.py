@@ -1,13 +1,14 @@
 import random
 import GridSquare
 import EventSquare
+import pygame
 
 class MineMap:
 
 
     OFFCOLOR = (210, 210, 210)
     ONCOLOR = (140, 140, 140)
-    BACKGROUNDCOLOR = (160, 160, 135)
+    BACKGROUNDCOLOR = (0, 0, 0)
     #each box in the grid is 37 pixels across
     boxWidth = 39
     margin = 1
@@ -129,6 +130,14 @@ class MineMap:
             for j in range(self.mapWidth):
                 self.grid[i][j].drawSquare()
         self.resetButton.drawSquare()
+        self.text_to_screen("Created by Michael McGuire (CS \'20)", self.resetButton.surface, (10, 10))
+        #self.text_to_screen("Created using pygame", self.resetButton.surface, (10, 40))
+        
+    def text_to_screen(self, text, surface, pos):
+        text = str(text)
+        font = pygame.font.Font(None, 24)
+        text = font.render(text, True, (0, 255, 0))
+        surface.blit(text, (pos[0], pos[1]))
                 
     def getSquareFromCoords(self, pos):
         if (pos[0] <= self.maxXCoord() and pos[0] >= self.topLeftX and pos[1] <= self.maxYCoord() and pos[1] >= self.topLeftY):

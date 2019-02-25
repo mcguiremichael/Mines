@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+
 import pygame
 import Button
 import MineMap
