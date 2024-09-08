@@ -92,7 +92,7 @@ class MineMap:
         dispersedPlaces = self.randomizeIndices(totalNum)
         dispersedGrid = [[0 for i in range(self.mapWidth)] for i in range(self.mapHeight)]
         for i in range(len(dispersedPlaces)):
-            x = dispersedPlaces[i] / self.mapWidth
+            x = dispersedPlaces[i] // self.mapWidth
             y = dispersedPlaces[i] % self.mapWidth
             dispersedGrid[x][y] = 9
         return dispersedGrid
@@ -141,8 +141,8 @@ class MineMap:
                 
     def getSquareFromCoords(self, pos):
         if (pos[0] <= self.maxXCoord() and pos[0] >= self.topLeftX and pos[1] <= self.maxYCoord() and pos[1] >= self.topLeftY):
-            x = (pos[0] - self.topLeftX) / (MineMap.boxWidth + MineMap.margin)
-            y = (pos[1] - self.topLeftY) / (MineMap.boxWidth + MineMap.margin)
+            x = int((pos[0] - self.topLeftX)) // (MineMap.boxWidth + MineMap.margin)
+            y = int((pos[1] - self.topLeftY)) // (MineMap.boxWidth + MineMap.margin)
             return [x, y]
         else:
             return None

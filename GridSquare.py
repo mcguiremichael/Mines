@@ -73,8 +73,8 @@ class GridSquare(Button.Button):
         
     def drawWrongChoice(self):
         self.drawMine()
-        pygame.draw.line(self.surface, GridSquare.RED, (self.x + self.width / 8, self.y + self.height / 8), (self.x + (self.width * 7 / 8), self.y + (self.height * 7 / 8)), self.width / 8)
-        pygame.draw.line(self.surface, GridSquare.RED, (self.x + self.width / 8, (self.y + self.height * 7 / 8)), (self.x + (self.width * 7 / 8), self.y + self.width / 8), self.width / 8)
+        pygame.draw.line(self.surface, GridSquare.RED, (int(self.x + self.width // 8), int(self.y + self.height // 8)), (int(self.x + (self.width * 7 // 8)), int(self.y + (self.height * 7 // 8))), int(self.width // 8))
+        pygame.draw.line(self.surface, GridSquare.RED, (int(self.x + self.width // 8), int(self.y + self.height * 7 / 8)), (int(self.x + (self.width * 7 // 8)), int(self.y + self.width // 8)), int(self.width // 8))
         
     def drawSquare(self):
         val = self.value
